@@ -16,6 +16,8 @@ type todo struct {
 	Complete bool
 }
 
+type todos []todo
+
 func main() {
 	homeDir, err := homedir.Dir()
 	if err != nil {
@@ -30,7 +32,7 @@ func main() {
 			log.Fatal(err)
 		}
 	}
-	var tasks []todo
+	var tasks todos
 	_ = json.Unmarshal(file, &tasks)
 	loop := true
 	for loop {
@@ -48,18 +50,24 @@ func main() {
 						fmt.Println("Entered an empty task.")
 						break
 					}
-					tasks = append(tasks, addTask(cmds[2:]))
+					tasks.addTask(cmds[2:])
+				case "do":
+					if len(cmds) > 3 {
+						fmt.Printf("Unknown arguments - \"%s\".\n", strings.Join(cmds[3:], " "))
+						break
+					}
+					tasks = doTask(cmds[2], tasks)
 				case "list":
-					listTasks(tasks)
+					tasks.listTasks()
 				case "close":
 					fmt.Println("Task manager closed.")
 					loop = false
 				default:
-					fmt.Printf("Command \"%s\" not found.\n", strings.Join(cmds, " "))
+					fmt.Printf("Unknown command - \"%s\".\n", strings.Join(cmds, " "))
 				}
 			}
 		} else {
-			fmt.Printf("Command \"%s\" not found.\n", cmds[0])
+			fmt.Printf("Unknown command - \"%s\".\n", strings.Join(cmds, " "))
 		}
 	}
 }
@@ -76,33 +84,38 @@ func taskInfo() {
 	fmt.Println("\tclose\t\tClose task manager")
 }
 
-func addTask(s []string) todo {
+func (tasks *todos) addTask(s []string) {
 	task := todo{
 		Task:     strings.Join(s, " "),
 		Complete: false,
 	}
+	*tasks = append(*tasks, task)
 	fmt.Printf("Added \"%s\" to your task list.\n", task.Task)
-	return task
 }
 
-func listTasks(tasks []todo) {
+func (tasks *todos) listTasks() {
 	incomplete := false
-	for i := 0; i < len(tasks); i++ {
-		if !tasks[i].Complete {
+	for i := 0; i < len(*tasks); i++ {
+		if !(*tasks)[i].Complete {
 			incomplete = true
 			break
 		}
 	}
 	if !incomplete {
-		fmt.Println("Your task list is empty")
-		fmt.Println("Use \"task add [task]\" to add a new task")
+		fmt.Println("Your task list is empty.")
+		fmt.Println("Use \"task add [task]\" to add a new task.")
 		return
 	}
 	fmt.Println("You have the following tasks:")
-	for i, g := 0, 0; i < len(tasks); i++ {
-		if !tasks[i].Complete {
-			fmt.Printf(" %d. %s\n", g+1, tasks[i].Task)
+	for i, g := 0, 0; i < len(*tasks); i++ {
+		if !(*tasks)[i].Complete {
+			fmt.Printf(" %d. %s\n", g+1, (*tasks)[i].Task)
 			g++
 		}
 	}
+}
+
+func doTask(n string, tasks []todo) []todo {
+
+	return tasks
 }
