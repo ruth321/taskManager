@@ -51,11 +51,11 @@ func main() {
 				case "do":
 					tasks.doTask(cmds[2:])
 				case "list":
-					tasks.listTasks()
+					tasks.listTasks(cmds[2:])
 				case "rm":
-
+					tasks.removeTask(cmds[2:])
 				case "completed":
-					tasks.completedTasks()
+					tasks.completedTasks(cmds[2:])
 				case "close":
 					fmt.Println("Task manager closed.")
 					loop = false
@@ -67,6 +67,8 @@ func main() {
 			fmt.Printf("Unknown command - \"%s\".\n", strings.Join(cmds, " "))
 		}
 	}
+	file, _ = json.Marshal(tasks)
+	_ = ioutil.WriteFile(fileName, file, 0644)
 }
 
 func taskInfo() {
@@ -94,7 +96,10 @@ func (tasks *todos) addTask(s []string) {
 	fmt.Printf("Added \"%s\" to your task list.\n", task.Task)
 }
 
-func (tasks *todos) listTasks() {
+func (tasks *todos) listTasks(cmds []string) {
+	if !isValidCmds(cmds) {
+		return
+	}
 	incompTasks := getIncompTasks(*tasks)
 	if len(incompTasks) == 0 {
 		fmt.Println("Your task list is empty.")
@@ -103,12 +108,12 @@ func (tasks *todos) listTasks() {
 	}
 	fmt.Println("You have the following tasks:")
 	for i := 0; i < len(incompTasks); i++ {
-		fmt.Printf(" %d. %s\n", i+1, (incompTasks)[i].Task)
+		fmt.Printf(" %d. %s\n", i+1, incompTasks[i].Task)
 	}
 }
 
 func (tasks *todos) doTask(s []string) {
-	if !isValid(s, len(getIncompTasks(*tasks))) {
+	if !isValidNum(s, len(getIncompTasks(*tasks))) {
 		return
 	}
 	n, _ := strconv.Atoi(s[0])
@@ -117,6 +122,7 @@ func (tasks *todos) doTask(s []string) {
 			g++
 			if g == n {
 				(*tasks)[i].Complete = true
+				fmt.Printf("You have completed the \"%s\" task.\n", (*tasks)[i].Task)
 				break
 			}
 		}
@@ -124,7 +130,63 @@ func (tasks *todos) doTask(s []string) {
 
 }
 
-func (tasks *todos) completedTasks() {
+func (tasks *todos) removeTask(s []string) {
+	switch s[0] {
+	case "incomp":
+		(*tasks).rmIncompTask(s[1:])
+	case "comp":
+		(*tasks).rmCompTask(s[1:])
+	default:
+		_ = isValidCmds(s[0:])
+	}
+}
+
+func (tasks *todos) rmIncompTask(s []string) {
+	if !isValidNum(s, len(getIncompTasks(*tasks))) {
+		return
+	}
+	n, _ := strconv.Atoi(s[0])
+	for i, g := 0, 0; i < len(*tasks); i++ {
+		if !(*tasks)[i].Complete {
+			g++
+			if g == n {
+				n = i
+				break
+			}
+		}
+	}
+	fmt.Printf("You have deleted the \"%s\" task.\n", (*tasks)[n].Task)
+	for i := n; i < len(*tasks)-1; i++ {
+		(*tasks)[i] = (*tasks)[i+1]
+	}
+	*tasks = (*tasks)[:len(*tasks)-1]
+}
+
+func (tasks *todos) rmCompTask(s []string) {
+	if !isValidNum(s, len(getCompTasks(*tasks))) {
+		return
+	}
+	n, _ := strconv.Atoi(s[0])
+	for i, g := 0, 0; i < len(*tasks); i++ {
+		if (*tasks)[i].Complete {
+			g++
+			if g == n {
+				n = i
+				break
+			}
+		}
+	}
+	fmt.Printf("You have deleted the \"%s\" task.\n", (*tasks)[n].Task)
+	for i := n; i < len(*tasks)-1; i++ {
+		(*tasks)[i] = (*tasks)[i+1]
+	}
+	*tasks = (*tasks)[:len(*tasks)-1]
+}
+
+func (tasks *todos) completedTasks(cmds []string) {
+	if !isValidCmds(cmds) {
+		return
+	}
 	compTasks := getCompTasks(*tasks)
 	if len(compTasks) == 0 {
 		fmt.Println("You do not have completed tasks.")
@@ -133,7 +195,7 @@ func (tasks *todos) completedTasks() {
 	}
 	fmt.Println("You have finished the following tasks:")
 	for i := 0; i < len(compTasks); i++ {
-		fmt.Printf(" %d. %s\n", i+1, (compTasks)[i].Task)
+		fmt.Printf(" %d. %s\n", i+1, compTasks[i].Task)
 	}
 }
 
@@ -157,7 +219,7 @@ func getCompTasks(tasks []todo) []todo {
 	return compTasks
 }
 
-func isValid(s []string, max int) bool {
+func isValidNum(s []string, max int) bool {
 	if len(s) == 0 {
 		fmt.Println("Task number is not specified.")
 		return false
@@ -173,6 +235,18 @@ func isValid(s []string, max int) bool {
 	}
 	if n > max || n < 1 {
 		fmt.Println("Invalid task number.")
+		return false
+	}
+	return true
+}
+
+func isValidCmds(cmds []string) bool {
+	if len(cmds) == 1 {
+		fmt.Printf("Unknown arg - \"%s\"\n", strings.Join(cmds, " "))
+		return false
+	}
+	if len(cmds) > 1 {
+		fmt.Printf("Unknown args - \"%s\"\n", strings.Join(cmds, " "))
 		return false
 	}
 	return true
