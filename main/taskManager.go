@@ -10,11 +10,13 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type todo struct {
 	Task     string
 	Complete bool
+	Time     time.Time
 }
 
 type todos []todo
@@ -51,11 +53,11 @@ func main() {
 				case "do":
 					tasks.doTask(cmds[2:])
 				case "list":
-					tasks.listTasks(cmds[2:])
+					tasks.showTaskList(cmds[2:])
 				case "rm":
 					tasks.removeTask(cmds[2:])
 				case "completed":
-					tasks.completedTasks(cmds[2:])
+					tasks.showCompTasks(cmds[2:])
 				case "close":
 					fmt.Println("Task manager closed.")
 					loop = false
@@ -96,8 +98,8 @@ func (tasks *todos) addTask(s []string) {
 	fmt.Printf("Added \"%s\" to your task list.\n", task.Task)
 }
 
-func (tasks *todos) listTasks(cmds []string) {
-	if !isValidCmds(cmds) {
+func (tasks *todos) showTaskList(cmds []string) {
+	if isExcessCmds(cmds) {
 		return
 	}
 	incompTasks := getIncompTasks(*tasks)
@@ -122,12 +124,12 @@ func (tasks *todos) doTask(s []string) {
 			g++
 			if g == n {
 				(*tasks)[i].Complete = true
+				(*tasks)[i].Time = time.Now()
 				fmt.Printf("You have completed the \"%s\" task.\n", (*tasks)[i].Task)
 				break
 			}
 		}
 	}
-
 }
 
 func (tasks *todos) removeTask(s []string) {
@@ -137,7 +139,7 @@ func (tasks *todos) removeTask(s []string) {
 	case "comp":
 		(*tasks).rmCompTask(s[1:])
 	default:
-		_ = isValidCmds(s[0:])
+		_ = isExcessCmds(s[0:])
 	}
 }
 
@@ -183,8 +185,8 @@ func (tasks *todos) rmCompTask(s []string) {
 	*tasks = (*tasks)[:len(*tasks)-1]
 }
 
-func (tasks *todos) completedTasks(cmds []string) {
-	if !isValidCmds(cmds) {
+func (tasks *todos) showCompTasks(cmds []string) {
+	if isExcessCmds(cmds) {
 		return
 	}
 	compTasks := getCompTasks(*tasks)
@@ -240,14 +242,14 @@ func isValidNum(s []string, max int) bool {
 	return true
 }
 
-func isValidCmds(cmds []string) bool {
+func isExcessCmds(cmds []string) bool {
 	if len(cmds) == 1 {
 		fmt.Printf("Unknown arg - \"%s\"\n", strings.Join(cmds, " "))
-		return false
+		return true
 	}
 	if len(cmds) > 1 {
 		fmt.Printf("Unknown args - \"%s\"\n", strings.Join(cmds, " "))
-		return false
+		return true
 	}
-	return true
+	return false
 }
