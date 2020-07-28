@@ -7,6 +7,7 @@ import (
 	"github.com/mitchellh/go-homedir"
 	"io/ioutil"
 	"log"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -186,13 +187,28 @@ func (tasks *todos) rmCompTask(s []string) {
 }
 
 func (tasks *todos) showCompTasks(cmds []string) {
-	if isExcessCmds(cmds) {
-		return
+	var compTasks []todo
+	if len(cmds) > 0 {
+		switch cmds[0] {
+		case "hour":
+			if !isValidNum(cmds[1:], math.MaxInt32) {
+				return
+			}
+			compTasks = getCertCompTasks(*tasks, "hour", cmds[1])
+		case "day":
+			if !isValidNum(cmds[1:], math.MaxInt32) {
+				return
+			}
+			compTasks = getCertCompTasks(*tasks, "day", cmds[1])
+		default:
+			_ = isExcessCmds(cmds)
+			return
+		}
+	} else {
+		compTasks = getCompTasks(*tasks)
 	}
-	compTasks := getCompTasks(*tasks)
 	if len(compTasks) == 0 {
 		fmt.Println("You do not have completed tasks.")
-		fmt.Println("Use \"task do [number]\" to complete a task.")
 		return
 	}
 	fmt.Println("You have finished the following tasks:")
@@ -221,9 +237,30 @@ func getCompTasks(tasks []todo) []todo {
 	return compTasks
 }
 
+func getCertCompTasks(tasks []todo, t string, ds string) []todo {
+	a, _ := strconv.Atoi(ds)
+	d := float64(a)
+	var compTasks []todo
+	now := time.Now()
+	if t == "hour" {
+		for i := 0; i < len(tasks); i++ {
+			if tasks[i].Complete && now.Sub(tasks[i].Time).Hours() < d {
+				compTasks = append(compTasks, tasks[i])
+			}
+		}
+	} else {
+		for i := 0; i < len(tasks); i++ {
+			if tasks[i].Complete && now.Sub(tasks[i].Time).Hours()/24 < d {
+				compTasks = append(compTasks, tasks[i])
+			}
+		}
+	}
+	return compTasks
+}
+
 func isValidNum(s []string, max int) bool {
 	if len(s) == 0 {
-		fmt.Println("Task number is not specified.")
+		fmt.Println("Number is not specified.")
 		return false
 	}
 	if len(s) > 1 {
@@ -236,7 +273,7 @@ func isValidNum(s []string, max int) bool {
 		return false
 	}
 	if n > max || n < 1 {
-		fmt.Println("Invalid task number.")
+		fmt.Println("Invalid number.")
 		return false
 	}
 	return true
